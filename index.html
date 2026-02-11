@@ -10,6 +10,7 @@
       background: skyblue;
       touch-action: none;
     }
+
     canvas { display: block; }
 
     #menu, #gameOver {
@@ -40,7 +41,6 @@
       color: black;
     }
 
-    /* BIGGER MOBILE CONTROLS */
     #controls {
       position: absolute;
       bottom: 20px;
@@ -60,6 +60,7 @@
       background: rgba(0,0,0,0.55);
       color: white;
       user-select: none;
+      touch-action: none;
     }
 
     .leftGroup {
@@ -87,7 +88,6 @@
   Distance: <span id="distance">0</span>
 </div>
 
-<!-- Mobile Buttons -->
 <div id="controls">
   <div class="leftGroup">
     <button class="controlBtn" id="leftBtn">◀</button>
@@ -102,7 +102,6 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-/* RESPONSIVE CANVAS */
 function resizeCanvas(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -358,7 +357,7 @@ function restart() {
   startGame();
 }
 
-/* Keyboard */
+/* KEYBOARD */
 document.addEventListener("keydown", e => {
   if (e.key === "ArrowRight") rightPressed = true;
   if (e.key === "ArrowLeft") leftPressed = true;
@@ -370,18 +369,32 @@ document.addEventListener("keyup", e => {
   if (e.key === "ArrowLeft") leftPressed = false;
 });
 
-/* TRUE MULTI-TOUCH SUPPORT */
-leftBtn.onpointerdown = () => leftPressed = true;
-leftBtn.onpointerup = () => leftPressed = false;
-leftBtn.onpointercancel = () => leftPressed = false;
+/* TRUE MULTI-TOUCH FIX */
+function pressLeft(e){ e.preventDefault(); leftPressed = true; }
+function releaseLeft(e){ e.preventDefault(); leftPressed = false; }
 
-rightBtn.onpointerdown = () => rightPressed = true;
-rightBtn.onpointerup = () => rightPressed = false;
-rightBtn.onpointercancel = () => rightPressed = false;
+function pressRight(e){ e.preventDefault(); rightPressed = true; }
+function releaseRight(e){ e.preventDefault(); rightPressed = false; }
 
-jumpBtn.onpointerdown = () => {
+function pressJump(e){
+  e.preventDefault();
   if (onGround) car.dy = -13;
-};
+}
+
+leftBtn.addEventListener("pointerdown", pressLeft);
+leftBtn.addEventListener("pointerup", releaseLeft);
+leftBtn.addEventListener("pointerleave", releaseLeft);
+leftBtn.addEventListener("pointercancel", releaseLeft);
+
+rightBtn.addEventListener("pointerdown", pressRight);
+rightBtn.addEventListener("pointerup", releaseRight);
+rightBtn.addEventListener("pointerleave", releaseRight);
+rightBtn.addEventListener("pointercancel", releaseRight);
+
+jumpBtn.addEventListener("pointerdown", pressJump);
+
+document.body.addEventListener("touchstart", e => e.preventDefault(), { passive:false });
+document.body.addEventListener("touchmove", e => e.preventDefault(), { passive:false });
 
 document.getElementById("highScoreText").innerText =
   localStorage.getItem("hillHighScore") || 0;
