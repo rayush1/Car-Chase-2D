@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Run From the Police</title>
+  <title>Hill Escape</title>
   <style>
     body {
       margin: 0;
@@ -40,25 +40,31 @@
       color: black;
     }
 
-    /* Mobile Controls */
+    /* BIGGER MOBILE CONTROLS */
     #controls {
       position: absolute;
       bottom: 20px;
       width: 100%;
       display: flex;
       justify-content: space-between;
-      padding: 0 20px;
+      padding: 0 25px;
       box-sizing: border-box;
     }
 
     .controlBtn {
-      width: 70px;
-      height: 70px;
-      font-size: 28px;
+      width: 110px;
+      height: 110px;
+      font-size: 38px;
       border-radius: 50%;
       border: none;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.55);
       color: white;
+      user-select: none;
+    }
+
+    .leftGroup {
+      display: flex;
+      gap: 15px;
     }
   </style>
 </head>
@@ -83,7 +89,7 @@
 
 <!-- Mobile Buttons -->
 <div id="controls">
-  <div>
+  <div class="leftGroup">
     <button class="controlBtn" id="leftBtn">◀</button>
     <button class="controlBtn" id="rightBtn">▶</button>
   </div>
@@ -95,8 +101,14 @@
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+
+/* RESPONSIVE CANVAS */
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
 let offset, speed, coinsCollected, distance, gameRunning;
 let enemyX, boostTime, slowEnemyTime;
@@ -111,7 +123,7 @@ const car = {
   width: 90,
   height: 40,
   dy: 0,
-  gravity: 0.5   // smoother jump
+  gravity: 0.5
 };
 
 let coins = [];
@@ -254,8 +266,6 @@ function drawBlueCoins() {
 }
 
 function updatePhysics() {
-
-  // smooth acceleration
   if (rightPressed) {
     speed += 0.2;
     if (speed > 5) speed = 5;
@@ -360,21 +370,16 @@ document.addEventListener("keyup", e => {
   if (e.key === "ArrowLeft") leftPressed = false;
 });
 
-/* Mobile buttons */
-leftBtn.onmousedown = () => leftPressed = true;
-leftBtn.onmouseup = () => leftPressed = false;
-rightBtn.onmousedown = () => rightPressed = true;
-rightBtn.onmouseup = () => rightPressed = false;
+/* TRUE MULTI-TOUCH SUPPORT */
+leftBtn.onpointerdown = () => leftPressed = true;
+leftBtn.onpointerup = () => leftPressed = false;
+leftBtn.onpointercancel = () => leftPressed = false;
 
-leftBtn.ontouchstart = () => leftPressed = true;
-leftBtn.ontouchend = () => leftPressed = false;
-rightBtn.ontouchstart = () => rightPressed = true;
-rightBtn.ontouchend = () => rightPressed = false;
+rightBtn.onpointerdown = () => rightPressed = true;
+rightBtn.onpointerup = () => rightPressed = false;
+rightBtn.onpointercancel = () => rightPressed = false;
 
-jumpBtn.ontouchstart = () => {
-  if (onGround) car.dy = -13;
-};
-jumpBtn.onmousedown = () => {
+jumpBtn.onpointerdown = () => {
   if (onGround) car.dy = -13;
 };
 
