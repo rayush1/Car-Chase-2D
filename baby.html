@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hill Escape</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial;
+      background: skyblue;
+    }
+    canvas { display: block; }
+
+    #menu, #gameOver {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0,0,0,0.6);
+      color: white;
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 18px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      color: black;
+    }
+  </style>
+</head>
+<body>
+
+<div id="menu">
+  <h1>Hill Escape</h1>
+  <div>High Score: <span id="highScoreText">0</span></div>
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<div id="gameOver" style="display:none;">
+  <h1>Game Over</h1>
+  <div id="finalScore"></div>
+  <button onclick="restart()">Play Again</button>
+</div>
+
+<div id="hud" style="display:none;">
+  Coins: <span id="coins">0</span> |
+  Distance: <span id="distance">0</span>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let offset, speed, coinsCollected, distance, gameRunning;
+let enemyX, boostTime, slowEnemyTime;
+let onGround = false;
+
+let rightPressed = false;
+let leftPressed = false;
+
+const car = {
+  x: 250,
+  y: 300,
+  width: 90,
+  height: 40,
+  dy: 0,
+  gravity: 0.6
+};
+
+let coins = [];
+let blueCoins = [];
+let trees = [];
+
+function groundHeight(x) {
+  return 400 + Math.sin((x + offset) * 0.01) * 90;
+}
+
+function initWorld() {
+  offset = 0;
+  speed = 0;
+  coinsCollected = 0;
+  distance = 0;
+  enemyX = 50;
+  boostTime = 0;
+  slowEnemyTime = 0;
+  gameRunning = true;
+
+  coins = [];
+  for (let i = 0; i < 60; i++) {
+    coins.push({
+      x: i * 300 + 400,
+      yOffset: Math.random() * 50 + 40,
+      collected: false
+    });
+  }
+
+  blueCoins = [];
+  for (let i = 0; i < 15; i++) {
+    blueCoins.push({
+      x: i * 900 + 700,
+      yOffset: Math.random() * 60 + 60,
+      collected: false
+    });
+  }
+
+  trees = [];
+  for (let i = 0; i < 40; i++) {
+    trees.push({ x: i * 500 + 200 });
+  }
+}
+
+function drawGround() {
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height);
+  for (let x = 0; x < canvas.width; x++) {
+    ctx.lineTo(x, groundHeight(x));
+  }
+  ctx.lineTo(canvas.width, canvas.height);
+  ctx.fillStyle = "green";
+  ctx.fill();
+}
+
+function drawCar() {
+  ctx.fillStyle = boostTime > 0 ? "orange" : "red";
+  ctx.fillRect(car.x, car.y, car.width, car.height);
+
+  ctx.fillStyle = "black";
+  ctx.beginPath();
+  ctx.arc(car.x + 20, car.y + car.height, 12, 0, Math.PI * 2);
+  ctx.arc(car.x + 70, car.y + car.height, 12, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawEnemy() {
+  let groundY = groundHeight(enemyX);
+  let y = groundY - 40;
+
+  ctx.fillStyle = "blue";
+  ctx.fillRect(enemyX, y, 80, 40);
+
+  ctx.fillStyle = "black";
+  ctx.beginPath();
+  ctx.arc(enemyX + 18, y + 40, 11, 0, Math.PI * 2);
+  ctx.arc(enemyX + 60, y + 40, 11, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawTrees() {
+  trees.forEach(tree => {
+    let screenX = tree.x - offset;
+    if (screenX > -50 && screenX < canvas.width + 50) {
+      let groundY = groundHeight(screenX);
+      ctx.fillStyle = "#8B4513";
+      ctx.fillRect(screenX, groundY - 60, 12, 60);
+      ctx.fillStyle = "darkgreen";
+      ctx.beginPath();
+      ctx.arc(screenX + 6, groundY - 70, 25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+function drawCoins() {
+  coins.forEach(coin => {
+    let screenX = coin.x - offset;
+    let groundY = groundHeight(screenX);
+    let coinY = groundY - coin.yOffset;
+
+    if (!coin.collected && screenX > -20 && screenX < canvas.width + 20) {
+      ctx.fillStyle = "gold";
+      ctx.beginPath();
+      ctx.arc(screenX, coinY, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      let dx = screenX - (car.x + car.width / 2);
+      let dy = coinY - (car.y + car.height / 2);
+      if (Math.sqrt(dx*dx + dy*dy) < 30) {
+        coin.collected = true;
+        coinsCollected++;
+        document.getElementById("coins").innerText = coinsCollected;
+      }
+    }
+  });
+}
+
+function drawBlueCoins() {
+  blueCoins.forEach(coin => {
+    let screenX = coin.x - offset;
+    let groundY = groundHeight(screenX);
+    let coinY = groundY - coin.yOffset;
+
+    if (!coin.collected && screenX > -20 && screenX < canvas.width + 20) {
+      ctx.fillStyle = "cyan";
+      ctx.beginPath();
+      ctx.arc(screenX, coinY, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      let dx = screenX - (car.x + car.width / 2);
+      let dy = coinY - (car.y + car.height / 2);
+      if (Math.sqrt(dx*dx + dy*dy) < 35) {
+        coin.collected = true;
+        boostTime = 180;
+        slowEnemyTime = 180;
+      }
+    }
+  });
+}
+
+function updatePhysics() {
+
+  // movement works even while jumping
+  if (rightPressed) speed = 5;
+  else if (leftPressed) speed = -3;
+  else speed = 0;
+
+  let currentSpeed = speed;
+
+  if (boostTime > 0) {
+    currentSpeed *= 1.8;
+    boostTime--;
+  }
+
+  offset += currentSpeed;
+  distance += currentSpeed * 0.1;
+  document.getElementById("distance").innerText = Math.floor(distance);
+
+  let groundY = groundHeight(car.x);
+  car.dy += car.gravity;
+  car.y += car.dy;
+
+  if (car.y + car.height > groundY) {
+    car.y = groundY - car.height;
+    car.dy = 0;
+    onGround = true;
+  } else {
+    onGround = false;
+  }
+
+  let enemySpeed = 0.12 + (speed * 0.025);
+  if (slowEnemyTime > 0) {
+    enemySpeed *= 0.25;
+    slowEnemyTime--;
+  }
+
+  enemyX += enemySpeed;
+
+  if (enemyX + 60 > car.x) {
+    endGame();
+  }
+}
+
+function gameLoop() {
+  if (!gameRunning) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  updatePhysics();
+  drawTrees();
+  drawGround();
+  drawCoins();
+  drawBlueCoins();
+  drawEnemy();
+  drawCar();
+
+  requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  document.getElementById("menu").style.display = "none";
+  document.getElementById("hud").style.display = "block";
+  document.getElementById("coins").innerText = "0";
+  document.getElementById("distance").innerText = "0";
+  initWorld();
+  gameLoop();
+}
+
+function endGame() {
+  gameRunning = false;
+  document.getElementById("gameOver").style.display = "flex";
+  document.getElementById("hud").style.display = "none";
+
+  let score = Math.floor(distance) + coinsCollected * 10;
+  document.getElementById("finalScore").innerText = "Score: " + score;
+
+  let high = localStorage.getItem("hillHighScore") || 0;
+  if (score > high) {
+    localStorage.setItem("hillHighScore", score);
+  }
+  document.getElementById("highScoreText").innerText =
+    localStorage.getItem("hillHighScore") || 0;
+}
+
+function restart() {
+  document.getElementById("gameOver").style.display = "none";
+  startGame();
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight") rightPressed = true;
+  if (e.key === "ArrowLeft") leftPressed = true;
+
+  if (e.code === "Space" && onGround) {
+    car.dy = -12;
+  }
+});
+
+document.addEventListener("keyup", e => {
+  if (e.key === "ArrowRight") rightPressed = false;
+  if (e.key === "ArrowLeft") leftPressed = false;
+});
+
+document.getElementById("highScoreText").innerText =
+  localStorage.getItem("hillHighScore") || 0;
+</script>
+</body>
+</html>
