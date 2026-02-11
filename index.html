@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hill Escape</title>
+  <title>Run From the Police</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       font-family: Arial;
       background: skyblue;
+      touch-action: none;
     }
     canvas { display: block; }
 
@@ -38,6 +39,27 @@
       font-weight: bold;
       color: black;
     }
+
+    /* Mobile Controls */
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+      box-sizing: border-box;
+    }
+
+    .controlBtn {
+      width: 70px;
+      height: 70px;
+      font-size: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.5);
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -57,6 +79,15 @@
 <div id="hud" style="display:none;">
   Coins: <span id="coins">0</span> |
   Distance: <span id="distance">0</span>
+</div>
+
+<!-- Mobile Buttons -->
+<div id="controls">
+  <div>
+    <button class="controlBtn" id="leftBtn">◀</button>
+    <button class="controlBtn" id="rightBtn">▶</button>
+  </div>
+  <button class="controlBtn" id="jumpBtn">⬆</button>
 </div>
 
 <canvas id="game"></canvas>
@@ -80,7 +111,7 @@ const car = {
   width: 90,
   height: 40,
   dy: 0,
-  gravity: 0.6
+  gravity: 0.5   // smoother jump
 };
 
 let coins = [];
@@ -224,10 +255,18 @@ function drawBlueCoins() {
 
 function updatePhysics() {
 
-  // movement works even while jumping
-  if (rightPressed) speed = 5;
-  else if (leftPressed) speed = -3;
-  else speed = 0;
+  // smooth acceleration
+  if (rightPressed) {
+    speed += 0.2;
+    if (speed > 5) speed = 5;
+  }
+  else if (leftPressed) {
+    speed -= 0.2;
+    if (speed < -3) speed = -3;
+  }
+  else {
+    speed *= 0.95;
+  }
 
   let currentSpeed = speed;
 
@@ -284,8 +323,6 @@ function gameLoop() {
 function startGame() {
   document.getElementById("menu").style.display = "none";
   document.getElementById("hud").style.display = "block";
-  document.getElementById("coins").innerText = "0";
-  document.getElementById("distance").innerText = "0";
   initWorld();
   gameLoop();
 }
@@ -311,13 +348,11 @@ function restart() {
   startGame();
 }
 
+/* Keyboard */
 document.addEventListener("keydown", e => {
   if (e.key === "ArrowRight") rightPressed = true;
   if (e.key === "ArrowLeft") leftPressed = true;
-
-  if (e.code === "Space" && onGround) {
-    car.dy = -12;
-  }
+  if (e.code === "Space" && onGround) car.dy = -13;
 });
 
 document.addEventListener("keyup", e => {
@@ -325,9 +360,26 @@ document.addEventListener("keyup", e => {
   if (e.key === "ArrowLeft") leftPressed = false;
 });
 
+/* Mobile buttons */
+leftBtn.onmousedown = () => leftPressed = true;
+leftBtn.onmouseup = () => leftPressed = false;
+rightBtn.onmousedown = () => rightPressed = true;
+rightBtn.onmouseup = () => rightPressed = false;
+
+leftBtn.ontouchstart = () => leftPressed = true;
+leftBtn.ontouchend = () => leftPressed = false;
+rightBtn.ontouchstart = () => rightPressed = true;
+rightBtn.ontouchend = () => rightPressed = false;
+
+jumpBtn.ontouchstart = () => {
+  if (onGround) car.dy = -13;
+};
+jumpBtn.onmousedown = () => {
+  if (onGround) car.dy = -13;
+};
+
 document.getElementById("highScoreText").innerText =
   localStorage.getItem("hillHighScore") || 0;
 </script>
 </body>
 </html>
-
